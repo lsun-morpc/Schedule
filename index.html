@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule Planner</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 50%;
+            margin: auto;
+            overflow: hidden;
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        form {
+            background: #fff;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px #ccc;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            background: #333;
+            color: #fff;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background: #555;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            background: #fff;
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px #ccc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: grab;
+        }
+
+        li.dragging {
+            opacity: 0.5;
+        }
+
+        .schedule-buttons {
+            display: flex;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Schedule Planner</h1>
+        <form id="scheduleForm">
+            <label for="event">Event:</label>
+            <input type="text" id="event" name="event" required>
+            
+            <label for="date">Date:</label>
+            <input type="date" id="date" name="date" required>
+            
+            <label for="startTime">Start Time:</label>
+            <input type="time" id="startTime" name="startTime" required>
+
+            <label for="endTime">End Time:</label>
+            <input type="time" id="endTime" name="endTime" required>
+            
+            <button type="submit">Add Schedule</button>
+        </form>
+        <h2>Your Schedule</h2>
+        <ul id="scheduleList">
+            <!-- Schedule items will be added here -->
+        </ul>
+    </div>
+    <script>
+        document.getElementById('scheduleForm').addEventListener('submit', addSchedule);
+        const scheduleList = document.getElementById('scheduleList');
+
+        function addSchedule(e) {
+            e.preventDefault();
+
+            const event = document.getElementById('event').value;
+            const date = document.getElementById('date').value;
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+
+            if(event && date && startTime && endTime) {
+                const li = document.createElement('li');
+                li.setAttribute('draggable', 'true');
+                li.innerHTML = `
+                    <span>${event} - ${date}, ${startTime} to ${endTime}</span>
+                    <div class="schedule-buttons">
+                        <button onclick="editSchedule(this)">Edit</button>
+                        <button onclick="deleteSchedule(this)">Delete</button>
+                    </div>
+                `;
+                addDragAndDropListeners(li);
+                scheduleList.appendChild(li);
+
+                // Clear the form
+                document.getElementById('scheduleForm').reset();
+            }
+        }
+
+        function deleteSchedule(button) {
+            const li = button.parentElement.parentElement;
+            li.remove();
+        }
+
+        function editSchedule(button) {
+            const li = button.parentElement.parentElement;
+            const span = li.querySelector('span').textContent;
+
+            // Extract the details from the text content
+            const [eventDetails, timeDetails] = span.split(' - ');
+            const [event, date] = eventDetails.split(' ');
+            const [startTime, endTime] = timeDetails.replace(' at ', '').split(' to ');
+
+            // Populate the form with the existing values
+            document.getElementById('event').value = event;
+            document.getElementById('date').value = date;
+            document.getElementById('startTime').value = startTime;
+            document.getElementById('endTime').value = endTime;
+
+            // Remove the existing item
+            li.remove();
+        }
+
+        function addDragAndDropListeners(li) {
+            li.addEventListener('dragstart', () => {
+                li.classList.add('dragging');
+            });
+
+            li.addEventListener('dragend', () => {
+                li.classList.remove('dragging');
+            });
+
+            li.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const draggingElement = document.querySelector('.dragging');
+                const afterElement = getDragAfterElement(scheduleList, e.clientY);
+                if (afterElement == null) {
+                    scheduleList.appendChild(draggingElement);
+                } else {
+                    scheduleList.insertBefore(draggingElement, afterElement);
+                }
+            });
+        }
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('li:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        // Initialize drag-and-drop listeners for existing list items
+        document.querySelectorAll('#scheduleList li').forEach(addDragAndDropListeners);
+    </script>
+</body>
+</html>
